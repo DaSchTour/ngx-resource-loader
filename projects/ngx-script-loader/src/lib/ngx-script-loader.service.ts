@@ -11,31 +11,33 @@ export class NgxScriptLoaderService {
   private head: HTMLHeadElement;
   private alreadyLoaded = new Set<string>();
 
-  constructor(@Inject(DOCUMENT) document: Document) {
-    this.document = document;
+  constructor(@Inject(DOCUMENT) document: any) {
+    this.document = document as Document;
     this.head = this.document.head;
     this.checkAlreadyLoadedScripts();
     this.checkAlreadyLoadedStyles();
   }
 
-  private static observeLoad(element: HTMLElement): Observable<UIEvent> {
+  private observeLoad(element: HTMLElement): Observable<UIEvent> {
     return new Observable((observer: Observer<UIEvent>) => {
-      const successHandler = (event: UIEvent) => {
+      function successHandler(event: UIEvent) {
         const readyState: string = get(element, ['readyState'], '');
         // For IE we have readyState, other browsers just call the load event and we proccede
         if (readyState === 'complete' || readyState === 'loaded' || event.type === 'load') {
           observer.next(event);
           observer.complete();
         }
-      };
-      const errorHandler = (event: UIEvent) => observer.error(event);
+      }
+      function errorHandler(event: UIEvent) {
+        observer.error(event);
+      }
       set(element, ['onreadystatechange'], successHandler);
       set(element, ['onload'], get(element, ['onreadystatechange'], successHandler));
       set(element, ['onerror'], errorHandler);
     });
   }
 
-  private static createScriptElement(src: string, integrity?: string): HTMLScriptElement {
+  private createScriptElement(src: string, integrity?: string): HTMLScriptElement {
     const script = document.createElement('script');
     if (integrity !== 'undefined') {
       script.integrity = integrity;
@@ -46,7 +48,7 @@ export class NgxScriptLoaderService {
   }
 
   // tslint:disable-next-line:naming-convention
-  private static createCSSElement(href: string): HTMLLinkElement {
+  private createCSSElement(href: string): HTMLLinkElement {
     const style = document.createElement('link');
 
     style.rel = 'stylesheet';
@@ -66,8 +68,8 @@ export class NgxScriptLoaderService {
     if (this.alreadyLoaded.has(src)) {
       return EMPTY;
     } else {
-      const script = NgxScriptLoaderService.createScriptElement(src, integrity);
-      const observable = NgxScriptLoaderService.observeLoad(script);
+      const script = this.createScriptElement(src, integrity);
+      const observable = this.observeLoad(script);
       this.head.appendChild(script);
       this.alreadyLoaded.add(src);
       return observable;
@@ -84,8 +86,8 @@ export class NgxScriptLoaderService {
     if (this.alreadyLoaded.has(href)) {
       return EMPTY;
     } else {
-      const style = NgxScriptLoaderService.createCSSElement(href);
-      const observable = NgxScriptLoaderService.observeLoad(style);
+      const style = this.createCSSElement(href);
+      const observable = this.observeLoad(style);
       this.head.appendChild(style);
       this.alreadyLoaded.add(href);
       return observable;
