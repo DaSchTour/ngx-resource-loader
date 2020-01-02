@@ -1,0 +1,42 @@
+language: node_js
+sudo: false
+node_js:
+  - '10'
+
+env:
+  global:
+    - CC_TEST_REPORTER_ID=8f88e53b3ed7ea3c813ce10893b8cac01429705a674fe8b00cf34a5c93838b28
+    - NG_CLI_ANALYTICS=ci
+
+addons:
+  chrome: stable
+
+cache:
+  directories:
+    - node_modules
+    - $HOME/.npm
+
+before_install:
+  - npm i -g codecov greenkeeper-lockfile
+
+install: npm install
+
+before_script:
+  - greenkeeper-lockfile-update
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
+
+script:
+  - npm run build
+  - npm run test:ci
+
+after_script:
+  - greenkeeper-lockfile-upload
+  # Pipe the coverage data to Code Climate
+  - ./cc-test-reporter format-coverage -t lcov -o coverage/codeclimate.ngx-script-loader.json coverage/ngx-script-loader/lcov.info
+  - ./cc-test-reporter sum-coverage coverage/codeclimate.*.json -p 1 # Sum both coverage parts into coverage/codeclimate.json
+  - if [[ "$TRAVIS_TEST_RESULT" == 0 ]]; then ./cc-test-reporter upload-coverage; fi # Upload coverage/codeclimate.json
+
+after_success:
+  - codecov
